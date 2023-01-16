@@ -163,12 +163,11 @@ class Button(pygame.sprite.Sprite):
         self.inactive_clr = inactive_color
         self.active_clr = active_color
 
-    def draw(self, x, y, message, message_size, action=None):
+    def draw(self, x, y, message, message_size, action=None, mouse_down=False):
         mouse = pygame.mouse.get_pos()
-        click = pygame.mouse.get_pressed()
         if x < mouse[0] < x + self.width and y < mouse[1] < y + self.height:
             pygame.draw.rect(screen, self.active_clr, (x, y, self.width, self.height))
-            if click[0] and action is not None:
+            if mouse_down and action is not None:
                 action()
         else:
             pygame.draw.rect(screen, self.inactive_clr, (x, y, self.width, self.height))
@@ -193,6 +192,7 @@ def start_screen():
     button_info = Button(50, 50, (0, 200, 255), (0, 150, 255))
 
     while True:
+        mouse_down = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 if int(high_score) < score:
@@ -200,13 +200,15 @@ def start_screen():
                         f.write(str(score))
                         f.close()
                 terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_down = True
 
         pygame.draw.rect(screen, (0, 200, 255), (50, 35, 400, 135))
         draw_text(screen, "SPACE", 50, 160, 50)
         draw_text(screen, 'WAR', 50, 200, 110)
 
-        button_start.draw(75, 310, "START", 40, run_game)
-        button_info.draw(5, 445, "?", 40, info_screen)
+        button_start.draw(75, 310, "START", 40, run_game, mouse_down)
+        button_info.draw(5, 445, "?", 40, info_screen, mouse_down)
 
         pygame.display.flip()
 
@@ -260,7 +262,7 @@ def info_screen():
 
 # финальное окно
 def final_screen():
-    global score
+    global score, high_score
 
     # установка фона игры
     fon = pygame.transform.scale(load_image('final_screen.jpg'), (width, height))
@@ -270,6 +272,7 @@ def final_screen():
     button_menu = Button(225, 50, (0, 200, 255), (0, 150, 255))
 
     while True:
+        mouse_down = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 if int(high_score) < score:
@@ -277,12 +280,17 @@ def final_screen():
                         f.write(str(score))
                         f.close()
                 terminate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_down = True
+
+        if int(score) > int(high_score):
+            high_score = score
 
         draw_text(screen, f"Рекорд: {str(high_score)}", 50, 50, 75)
         draw_text(screen, f"Счет: {str(score)}", 50, 50, 150)
 
-        button_restart.draw(125, 300, "RESTART", 40, run_game)
-        button_menu.draw(125, 365, "MENU", 40, start_screen)
+        button_restart.draw(125, 300, "RESTART", 40, run_game, mouse_down)
+        button_menu.draw(125, 365, "MENU", 40, start_screen, mouse_down)
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -304,7 +312,7 @@ explosion_group = pygame.sprite.Group()
 button_group = pygame.sprite.Group()
 
 # настройка цикла игры
-FPS = 75
+FPS = 100
 clock = pygame.time.Clock()
 running = True
 ending = False
@@ -346,7 +354,7 @@ def run_game():
                     with open('score.txt', 'w') as f:
                         f.write(str(score))
                         f.close()
-                running = False
+                terminate()
 
             # если лкм
             if event.type == pygame.MOUSEBUTTONDOWN:
