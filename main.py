@@ -28,7 +28,25 @@ screen = pygame.display.set_mode(size)
 pygame.display.set_caption("SpaceWar")
 pygame.mouse.set_cursor(*pygame.cursors.diamond)
 
+# подкл звука выстрела
+shoot_snd = pygame.mixer.Sound(os.path.join('data', 'laserpew.wav'))
+shoot_snd.set_volume(0.3)
 
+# подкл звука взрыва
+expl_snd = pygame.mixer.Sound(os.path.join('data', 'explosion.wav'))
+expl_snd.set_volume(0.2)
+
+# подкл звука теряния hp
+loss_hp = pygame.mixer.Sound(os.path.join('data', 'sfx_hurt.ogg'))
+loss_hp.set_volume(0.5)
+
+# подкл фоновой музыки
+pygame.mixer.music.load(os.path.join('data', 'cosmic_creature.mp3'))
+pygame.mixer.music.set_volume(0.2)
+pygame.mixer.music.play()
+
+
+# структура героя гл
 class Player(pygame.sprite.Sprite):
     player_image = load_image('spaceship.png')
 
@@ -67,8 +85,10 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot > self.shoot_delay:
             self.last_shot = now
             Bullet(self.rect.centerx, self.rect.top)
+            shoot_snd.play()
 
 
+# структура астероида
 class Enemy(pygame.sprite.Sprite):
     player_image = load_image('asteroid.png')
     sizes = [(75, 75), (50, 50), (50, 50)]
@@ -107,6 +127,7 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.center = old_center
 
 
+# структура пули
 class Bullet(pygame.sprite.Sprite):
     bullet_image = load_image('bullet.png')
 
@@ -126,6 +147,7 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
 
 
+# структура анимации взрыва
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y):
         super().__init__(explosion_group, all_sprites)
@@ -155,6 +177,7 @@ class AnimatedSprite(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.frames[self.cur_frame], (100, 100))
 
 
+# структура кнопки
 class Button(pygame.sprite.Sprite):
     def __init__(self, button_width, button_height, inactive_color, active_color):
         super().__init__(button_group, all_sprites)
@@ -165,6 +188,8 @@ class Button(pygame.sprite.Sprite):
 
     def draw(self, x, y, message, message_size, action=None, mouse_down=False):
         mouse = pygame.mouse.get_pos()
+        # проверка попали ли коорд мыши на кнопку
+        # если да то как hover
         if x < mouse[0] < x + self.width and y < mouse[1] < y + self.height:
             pygame.draw.rect(screen, self.active_clr, (x, y, self.width, self.height))
             if mouse_down and action is not None:
@@ -183,11 +208,11 @@ def terminate():
 
 # стартовое окно
 def start_screen():
-
     # установка фона игры
     fon = pygame.transform.scale(load_image('start_screen.png'), (width, height))
     screen.blit(fon, (0, 0))
 
+    # создание кнопок
     button_start = Button(165, 55, (0, 200, 255), (0, 150, 255))
     button_info = Button(50, 50, (0, 200, 255), (0, 150, 255))
 
@@ -195,23 +220,60 @@ def start_screen():
         mouse_down = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                if int(high_score) < score:
-                    with open('score.txt', 'w') as f:
-                        f.write(str(score))
-                        f.close()
+                with open('score.txt', 'w') as f:
+                    f.write(str(high_score))
+                    f.close()
                 terminate()
+            # нажатие кнопки мыши вниз
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_down = True
 
+        # отрисовка названия в меню
         pygame.draw.rect(screen, (0, 200, 255), (50, 35, 400, 135))
         draw_text(screen, "SPACE", 50, 160, 50)
         draw_text(screen, 'WAR', 50, 200, 110)
 
-        button_start.draw(75, 310, "START", 40, run_game, mouse_down)
+        # проверка наведения или нажатия кнопки
+        button_start.draw(75, 310, "START", 40, chose_mode, mouse_down)
         button_info.draw(5, 445, "?", 40, info_screen, mouse_down)
 
+        # смена кадра
         pygame.display.flip()
+        clock.tick(FPS)
 
+
+# выбор сложности
+def chose_mode():
+    # установка фона игры
+    fon = pygame.transform.scale(load_image('final_screen.jpg'), (width, height))
+    screen.blit(fon, (0, 0))
+
+    # создание кнопок
+    button_easy = Button(275, 55, (0, 200, 255), (0, 150, 255))
+    button_hard = Button(275, 55, (0, 200, 255), (0, 150, 255))
+
+    while True:
+        mouse_down = False
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                with open('score.txt', 'w') as f:
+                    f.write(str(high_score))
+                    f.close()
+                terminate()
+            # нажатие кнопки мыши вниз
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_down = True
+
+        # отрисовка названия
+        pygame.draw.rect(screen, (0, 200, 255), (50, 35, 400, 55))
+        draw_text(screen, "MODE", 50, 175, 40)
+
+        # проверка наведения или нажатия кнопки
+        button_easy.draw(112.5, 150, "EASY MODE", 40, easy_mode, mouse_down)
+        button_hard.draw(112.5, 250, "HARD MODE", 40, hard_mode, mouse_down)
+
+        # смена кадра
+        pygame.display.flip()
         clock.tick(FPS)
 
 
@@ -223,6 +285,7 @@ def info_screen():
     fon = pygame.transform.scale(load_image('final_screen.jpg'), (width, height))
     screen.blit(fon, (0, 0))
 
+    # нужный инфа для вывода
     strings = ["Правила игры:", "Пролетель как можно дольше"]
     strings2 = ["Цель игры:", "Набрать как можно больше", "очков"]
     strings3 = ["Управление:", "ЛКМ"]
@@ -230,32 +293,38 @@ def info_screen():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                if int(high_score) < score:
-                    with open('score.txt', 'w') as f:
-                        f.write(str(score))
-                        f.close()
+                with open('score.txt', 'w') as f:
+                    f.write(str(high_score))
+                    f.close()
                 terminate()
+
+            # нажатие клавишы вниз на клаве
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     start_screen()
 
+        # отрисовка правил
         y = 25
         for string in strings:
             draw_text(screen, str(string), 25, 10, y)
             y += 25
 
+        # отрисовка цели игры
         y2 = 100
         for string2 in strings2:
             draw_text(screen, str(string2), 25, 10, y2)
             y2 += 25
 
+        # отрисовка управления
         y3 = 200
         for string3 in strings3:
             draw_text(screen, str(string3), 25, 10, y3)
             y3 += 25
 
+        # отрисовка возврата
         draw_text(screen, "ESС: вернуться назад", 25, 10, 465)
 
+        # смена кадра
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -268,6 +337,7 @@ def final_screen():
     fon = pygame.transform.scale(load_image('final_screen.jpg'), (width, height))
     screen.blit(fon, (0, 0))
 
+    # создание кнопок
     button_restart = Button(225, 55, (0, 200, 255), (0, 150, 255))
     button_menu = Button(225, 50, (0, 200, 255), (0, 150, 255))
 
@@ -275,23 +345,28 @@ def final_screen():
         mouse_down = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                if int(high_score) < score:
-                    with open('score.txt', 'w') as f:
-                        f.write(str(score))
-                        f.close()
+                with open('score.txt', 'w') as f:
+                    f.write(str(high_score))
+                    f.close()
                 terminate()
+
+            # если нажата кнопка мыши вниз
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_down = True
 
+        # перезаписывание результата
         if int(score) > int(high_score):
             high_score = score
 
+        # нарисование результатов
         draw_text(screen, f"Рекорд: {str(high_score)}", 50, 50, 75)
         draw_text(screen, f"Счет: {str(score)}", 50, 50, 150)
 
+        # проверка наведения или нажатия кнопки
         button_restart.draw(125, 300, "RESTART", 40, run_game, mouse_down)
         button_menu.draw(125, 365, "MENU", 40, start_screen, mouse_down)
 
+        # смена кадра
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -301,6 +376,20 @@ def draw_text(scr, text, text_size, x, y):
     font = pygame.font.Font("minecraft.ttf", text_size)
     string_rendered = font.render(text, True, pygame.Color('white'))
     scr.blit(string_rendered, (x, y))
+
+
+# функция для кол-во создания астероидов, если выбран сложынй режим
+def hard_mode():
+    global asteroids
+    asteroids = 20
+    run_game()
+
+
+# функция для кол-во создания астероидов, если выбран легкий режим
+def easy_mode():
+    global asteroids
+    asteroids = 10
+    run_game()
 
 
 # группы спрайтов (персонажей)
@@ -318,26 +407,32 @@ running = True
 ending = False
 moving = False
 score = 0
+asteroids = 0
+
+# прочитать наиб результат
 with open('score.txt', 'r') as f:
     high_score = f.read()
     f.close()
 
 
 def run_game():
-    global running, ending, moving, score
+    global running, ending, moving, score, asteroids
 
+    # очищение от старого
     for sprite in all_sprites:
         sprite.kill()
 
+    # настройка в цикле
     running = True
     ending = False
     moving = False
     score = 0
+
     # создание игрока
     player = Player()
 
     # создание астероидов
-    for i in range(10):
+    for i in range(asteroids):
         Enemy()
 
     # цикл отрисовки игры
@@ -356,7 +451,7 @@ def run_game():
                         f.close()
                 terminate()
 
-            # если лкм
+            # при нажатии кнопки мыши
             if event.type == pygame.MOUSEBUTTONDOWN:
 
                 # координаты мышки
@@ -367,6 +462,7 @@ def run_game():
                     if player.rect.collidepoint(pos):
                         moving = True
 
+            # при отпускании кнопки мыши
             if event.type == pygame.MOUSEBUTTONUP:
                 moving = False
 
@@ -379,6 +475,7 @@ def run_game():
                 hits = pygame.sprite.collide_mask(bullet, enemy)
                 if hits:
                     AnimatedSprite(load_image("explosion.png"), 4, 4, enemy.rect.x, enemy.rect.y)
+                    expl_snd.play()
                     score += 1
                     enemy.health -= 1
                     if enemy.health == 0:
@@ -391,6 +488,7 @@ def run_game():
             hits = pygame.sprite.collide_mask(enemy, player)
             if hits:
                 AnimatedSprite(load_image("explosion.png"), 4, 4, enemy.rect.x, enemy.rect.y)
+                loss_hp.play()
                 player.health -= 1
                 if player.health == 0:
                     ending = True
